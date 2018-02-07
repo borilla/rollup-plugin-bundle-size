@@ -2,25 +2,28 @@ const chalk = require('chalk');
 const fileSize = require('filesize');
 const gzip = require('gzip-size');
 
-function defaultRender(file, bundleSize, gzipSize, chalk) {
-	return chalk.green(`${file}: ${chalk.bold(bundleSize)} (${chalk.bold(gzipSize)} gzipped)`);
+function defaultReport(file, metrics, pluginOptions) {
+	if (!pluginOptions.silent) {
+		const { bundleSizeBytes, gzipSizeBytes } = metrics;
+		const bundleSizeStr = chalk.bold(fileSize(bundleSizeBytes));
+		const gzipSizeStr = chalk.bold(fileSize(gzipSizeBytes));
+		const reportStr = chalk.green(`AAA ${file}: ${bundleSizeStr} (${gzipSizeStr} gzip)`);
+
+		console.log(reportStr);
+	}
 }
 
-function bundleSizePlugin(pluginOptions) {
+module.exports = function (pluginOptions) {
 	pluginOptions = pluginOptions || {};
-	const silent = pluginOptions.silent || false;
-	const render = pluginOptions.render || defaultRender;
+	const report = pluginOptions.report || defaultReport;
 
 	return {
 		ongenerate(bundleOptions, bundle) {
-			if (!silent) {
-				const bundleSize = fileSize(Buffer.byteLength(bundle.code));
-				const gzipSize = fileSize(gzip.sync(bundle.code));
+			const bundleSizeBytes = Buffer.byteLength(bundle.code);
+			const gzipSizeBytes = gzip.sync(bundle.code);
+			const metrics = { bundleSizeBytes, gzipSizeBytes };
 
-				console.log(render(bundleOptions.file, bundleSize, gzipSize, chalk));
-			}
+			report(bundleOptions.file, metrics, pluginOptions);
 		}
 	};
 }
-
-module.exports = bundleSizePlugin;
